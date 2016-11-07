@@ -15,6 +15,7 @@
 
 import tensorflow as tf
 import tensorflowvisu
+import math
 from tensorflow.contrib.learn.python.learn.datasets.mnist import read_data_sets
 tf.set_random_seed(0)
 
@@ -42,6 +43,8 @@ mnist = read_data_sets("data", one_hot=True, reshape=False, validation_size=0)
 X = tf.placeholder(tf.float32, [None, 28, 28, 1]) #change 1 to 3 if color image => 3 bit per pixel
 # correct answers will go here
 Y_ = tf.placeholder(tf.float32, [None, 10])
+lr = tf.placeholder(tf.float32)
+pkeep = tf.placeholder(tf.float32)
 # weights W[784, 10]   784=28*28
 
 # W = tf.Variable(tf.zeros([784, 10]))
@@ -115,6 +118,12 @@ def training_step(i, update_test_data, update_train_data):
     # training on batches of 100 images with 100 labels
     batch_X, batch_Y = mnist.train.next_batch(100)
 
+    # learning rate decay
+    max_learning_rate = 0.003
+    min_learning_rate = 0.0001
+    decay_speed = 2000.0  # 0.003-0.0001-2000=>0.9826 done in 5000 iterations
+    learning_rate = min_learning_rate + (max_learning_rate - min_learning_rate) * math.exp(-i / decay_speed)
+
     # compute training values for visualisation
     if update_train_data:
         a, c, im, w, b = sess.run([accuracy, cross_entropy, I, allweights, allbiases], feed_dict={X: batch_X, Y_: batch_Y})
@@ -125,16 +134,16 @@ def training_step(i, update_test_data, update_train_data):
 
     # compute test values for visualisation
     if update_test_data:
-        a, c, im = sess.run([accuracy, cross_entropy, It], feed_dict={X: mnist.test.images, Y_: mnist.test.labels})
+        a, c, im = sess.run([accuracy, cross_entropy, It], feed_dict={X: mnist.test.images, Y_: mnist.test.labels, pkeep: 1.0})
         datavis.append_test_curves_data(i, a, c)
         datavis.update_image2(im)
         print(str(i) + ": ********* epoch " + str(i*100//mnist.train.images.shape[0]+1) + " ********* test accuracy:" + str(a) + " test loss: " + str(c))
 
     # the backpropagation training step
-    sess.run(train_step, feed_dict={X: batch_X, Y_: batch_Y})
+    sess.run(train_step, feed_dict={X: batch_X, Y_: batch_Y, pkeep: 0.75, lr: learning_rate})
 
 
-datavis.animate(training_step, iterations=10000+1, train_data_update_freq=10, test_data_update_freq=50, more_tests_at_start=True)
+datavis.animate(training_step, iterations=10000+1, train_data_update_freq=20, test_data_update_freq=100, more_tests_at_start=True)
 
 # to save the animation as a movie, add save_movie=True as an argument to datavis.animate
 # to disable the visualisation use the following line instead of the datavis.animate line
