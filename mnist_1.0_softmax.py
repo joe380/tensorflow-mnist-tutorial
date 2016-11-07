@@ -51,20 +51,28 @@ Y_ = tf.placeholder(tf.float32, [None, 10])
 # b = tf.Variable(tf.zeros([10]))
 
 L = 100
+M = 50
 
 W1 = tf.Variable(tf.truncated_normal([784, L], stddev=0.1))  # 784 = 28 * 28
 B1 = tf.Variable(tf.zeros([L]))
-W2 = tf.Variable(tf.truncated_normal([L, 10], stddev=0.1))
-B2 = tf.Variable(tf.zeros([10]))
+
+W2 = tf.Variable(tf.truncated_normal([L, M], stddev=0.1))
+B2 = tf.Variable(tf.zeros([M]))
+
+W3 = tf.Variable(tf.truncated_normal([M, 10], stddev=0.1))
+B3 = tf.Variable(tf.zeros([10]))
 
 # flatten the images into a single line of pixels
 # -1 in the shape definition means "the only possible dimension that will preserve the number of elements"
 XX = tf.reshape(X, [-1, 784])
 Y1 = tf.nn.relu(tf.matmul(XX, W1) + B1)
-Ylogits = tf.matmul(Y1, W2) + B2
+Y2 = tf.nn.relu(tf.matmul(Y1, W2) + B2)
+Ylogits = tf.matmul(Y2, W3) + B3
+Y = tf.nn.softmax(Ylogits)
 
 # The model
-Y = tf.nn.softmax(Ylogits)
+cross_entropy = tf.nn.softmax_cross_entropy_with_logits(Ylogits, Y_)
+cross_entropy = tf.reduce_mean(cross_entropy)*100
 
 # loss function: cross-entropy = - sum( Y_i * log(Yi) )
 #                           Y: the computed output vector
@@ -74,22 +82,22 @@ Y = tf.nn.softmax(Ylogits)
 # log takes the log of each element, * multiplies the tensors element by element
 # reduce_mean will add all the components in the tensor
 # so here we end up with the total cross-entropy for all images in the batch
-cross_entropy = -tf.reduce_mean(Y_ * tf.log(Y)) * 1000.0  # normalized for batches of 100 images,
+#cross_entropy = -tf.reduce_mean(Y_ * tf.log(Y)) * 1000.0  # normalized for batches of 100 images,
                                                           # *10 because  "mean" included an unwanted division by 10
 
 # accuracy of the trained model, between 0 (worst) and 1 (best)
 correct_prediction = tf.equal(tf.argmax(Y, 1), tf.argmax(Y_, 1))
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
-# training, learning rate = 0.005
-train_step = tf.train.GradientDescentOptimizer(0.005).minimize(cross_entropy)
+# training
+train_step = tf.train.AdamOptimizer().minimize(cross_entropy)
 
 # matplotlib visualisation
 # allweights = tf.reshape(W, [-1])
 # allbiases = tf.reshape(b, [-1])
 
-allweights = tf.concat(0, [tf.reshape(W1, [-1]), tf.reshape(W2, [-1])])
-allbiases  = tf.concat(0, [tf.reshape(B1, [-1]), tf.reshape(B2, [-1])])
+allweights = tf.concat(0, [tf.reshape(W1, [-1]), tf.reshape(W2, [-1]), tf.reshape(W3, [-1])])
+allbiases  = tf.concat(0, [tf.reshape(B1, [-1]), tf.reshape(B2, [-1]), tf.reshape(B3, [-1])])
 
 I = tensorflowvisu.tf_format_mnist_images(X, Y, Y_)  # assembles 10x10 images by default
 It = tensorflowvisu.tf_format_mnist_images(X, Y, Y_, 1000, lines=25)  # 1000 images on 25 lines
@@ -126,7 +134,7 @@ def training_step(i, update_test_data, update_train_data):
     sess.run(train_step, feed_dict={X: batch_X, Y_: batch_Y})
 
 
-datavis.animate(training_step, iterations=2000+1, train_data_update_freq=10, test_data_update_freq=50, more_tests_at_start=True)
+datavis.animate(training_step, iterations=10000+1, train_data_update_freq=10, test_data_update_freq=50, more_tests_at_start=True)
 
 # to save the animation as a movie, add save_movie=True as an argument to datavis.animate
 # to disable the visualisation use the following line instead of the datavis.animate line
