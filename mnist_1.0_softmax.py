@@ -39,20 +39,32 @@ tf.set_random_seed(0)
 mnist = read_data_sets("data", one_hot=True, reshape=False, validation_size=0)
 
 # input X: 28x28 grayscale images, the first dimension (None) will index the images in the mini-batch
-X = tf.placeholder(tf.float32, [None, 28, 28, 1])
+X = tf.placeholder(tf.float32, [None, 28, 28, 1]) #change 1 to 3 if color image => 3 bit per pixel
 # correct answers will go here
 Y_ = tf.placeholder(tf.float32, [None, 10])
 # weights W[784, 10]   784=28*28
-W = tf.Variable(tf.zeros([784, 10]))
+
+# W = tf.Variable(tf.zeros([784, 10]))
+
 # biases b[10]
-b = tf.Variable(tf.zeros([10]))
+
+# b = tf.Variable(tf.zeros([10]))
+
+L = 100
+
+W1 = tf.Variable(tf.truncated_normal([784, L], stddev=0.1))  # 784 = 28 * 28
+B1 = tf.Variable(tf.zeros([L]))
+W2 = tf.Variable(tf.truncated_normal([L, 10], stddev=0.1))
+B2 = tf.Variable(tf.zeros([10]))
 
 # flatten the images into a single line of pixels
 # -1 in the shape definition means "the only possible dimension that will preserve the number of elements"
 XX = tf.reshape(X, [-1, 784])
+Y1 = tf.nn.sigmoid(tf.matmul(XX, W1) + B1)
+Ylogits = tf.matmul(Y1, W2) + B2
 
 # The model
-Y = tf.nn.softmax(tf.matmul(XX, W) + b)
+Y = tf.nn.softmax(Ylogits)
 
 # loss function: cross-entropy = - sum( Y_i * log(Yi) )
 #                           Y: the computed output vector
@@ -73,8 +85,12 @@ accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 train_step = tf.train.GradientDescentOptimizer(0.005).minimize(cross_entropy)
 
 # matplotlib visualisation
-allweights = tf.reshape(W, [-1])
-allbiases = tf.reshape(b, [-1])
+# allweights = tf.reshape(W, [-1])
+# allbiases = tf.reshape(b, [-1])
+
+allweights = tf.concat(0, [tf.reshape(W1, [-1]), tf.reshape(W2, [-1])])
+allbiases  = tf.concat(0, [tf.reshape(B1, [-1]), tf.reshape(B2, [-1])])
+
 I = tensorflowvisu.tf_format_mnist_images(X, Y, Y_)  # assembles 10x10 images by default
 It = tensorflowvisu.tf_format_mnist_images(X, Y, Y_, 1000, lines=25)  # 1000 images on 25 lines
 datavis = tensorflowvisu.MnistDataVis()
