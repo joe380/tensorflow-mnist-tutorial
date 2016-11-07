@@ -60,7 +60,7 @@ B2 = tf.Variable(tf.zeros([10]))
 # flatten the images into a single line of pixels
 # -1 in the shape definition means "the only possible dimension that will preserve the number of elements"
 XX = tf.reshape(X, [-1, 784])
-Y1 = tf.nn.sigmoid(tf.matmul(XX, W1) + B1)
+Y1 = tf.nn.relu(tf.matmul(XX, W1) + B1)
 Ylogits = tf.matmul(Y1, W2) + B2
 
 # The model
